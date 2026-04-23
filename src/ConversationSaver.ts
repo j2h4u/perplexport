@@ -1,60 +1,69 @@
 import { Page } from "puppeteer";
-import { ConversationResponse } from "./types/conversation";
+import { ConversationResponse, ConversationEntry } from "./types/conversation";
+import { sleep } from "./utils";
+import {
+  CLOUDFLARE_BACKOFF_BASE_MS,
+  RATE_LIMIT_BACKOFF_BASE_MS,
+  THREAD_FETCH_RETRIES,
+  THREAD_PAGE_SIZE,
+} from "./config";
 
-interface ThreadData {
-  id: string;
-  conversation: ConversationResponse;
+async function fetchThread(page: Page, url: string): Promise<ConversationResponse> {
+  for (let attempt = 0; attempt < THREAD_FETCH_RETRIES; attempt++) {
+    const result = await page.evaluate(async (u: string) => {
+      try {
+        const r = await fetch(u);
+        const text = await r.text();
+        return { ok: r.ok, status: r.status, text };
+      } catch (e) {
+        return { ok: false, status: -1, text: String(e) };
+      }
+    }, url);
+
+    if (!result.ok || result.text.startsWith("<!DOCTYPE")) {
+      const wait = CLOUDFLARE_BACKOFF_BASE_MS * (attempt + 1);
+      console.log(`  Cloudflare challenge, waiting ${wait / 1000}s...`);
+      await sleep(wait);
+      continue;
+    }
+
+    try {
+      const data = JSON.parse(result.text) as ConversationResponse;
+      if ((data as any)?.error_code === "RATE_LIMITED") {
+        const wait = RATE_LIMIT_BACKOFF_BASE_MS * (attempt + 1);
+        console.log(`  Rate limited, retrying in ${wait / 1000}s...`);
+        await sleep(wait);
+        continue;
+      }
+      return data;
+    } catch {
+      const wait = RATE_LIMIT_BACKOFF_BASE_MS * (attempt + 1);
+      console.log(`  Bad JSON, retrying in ${wait / 1000}s...`);
+      await sleep(wait);
+    }
+  }
+  throw new Error(`Failed to fetch thread after ${THREAD_FETCH_RETRIES} attempts: ${url}`);
 }
 
-export class ConversationSaver {
-  private page: Page;
+export async function loadThread(
+  page: Page,
+  uuid: string
+): Promise<{ id: string; conversation: ConversationResponse }> {
+  let entries: ConversationEntry[] = [];
+  let cursor: string | null = null;
 
-  constructor(page: Page) {
-    this.page = page;
-  }
+  do {
+    const url = cursor
+      ? `/rest/thread/${uuid}?limit=${THREAD_PAGE_SIZE}&cursor=${encodeURIComponent(cursor)}`
+      : `/rest/thread/${uuid}?limit=${THREAD_PAGE_SIZE}`;
 
-  private resolve: (data: ThreadData) => void = (_) => {};
+    const data = await fetchThread(page, url);
+    entries = entries.concat(data.entries);
+    cursor = data.has_next_page ? data.next_cursor : null;
+  } while (cursor);
 
-  async initialize(): Promise<void> {
-    this.page.on("response", async (response) => {
-      const url = response.url();
-      if (
-        response.request().method() === "GET" &&
-        url.includes("/rest/thread/") &&
-        // TODO: might not be stable
-        url.includes("limit=100")
-      ) {
-        const threadId = url.split("/rest/thread/")[1].split("?")[0];
-        if (threadId === "list_recent") {
-          //ignore list request
-          return;
-        }
-        try {
-          const data = (await response.json()) as ConversationResponse;
-          if (this.resolve) {
-            this.resolve({
-              id: threadId,
-              conversation: data,
-            });
-          }
-        } catch (error) {
-          console.error("Error parsing JSON:", error);
-        }
-      }
-    });
-  }
-
-  // we request the thread's page and wait for the response for thread data
-  // the response is captured by the response handler above
-  // and we route it through the promise
-  // concurrency not possible with the browser anyway
-  async loadThreadFromURL(url: string): Promise<ThreadData> {
-    const pagePromise = new Promise<ThreadData>((resolve) => {
-      this.resolve = resolve;
-    });
-    await this.page.goto(url);
-    const threadData = await pagePromise;
-    this.resolve = (_) => {};
-    return threadData;
-  }
+  return {
+    id: uuid,
+    conversation: { status: "completed", entries, has_next_page: false, next_cursor: null },
+  };
 }

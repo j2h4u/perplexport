@@ -11,7 +11,7 @@
     "start": "ts-node src/index.ts",
     "dev": "ts-node-dev --respawn src/index.ts",
     "prepublishOnly": "npm run build",
-    "postinstall": "chmod +x dist/cli.js"
+    "postinstall": "test -f dist/cli.js && chmod +x dist/cli.js || true"
   },
   "keywords": [
     "perplexity",

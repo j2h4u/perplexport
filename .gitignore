@@ -2,3 +2,9 @@ node_modules
 conversations
 done.json
 dist
+session-cookies.json
+debug-*.png
+debug-*.json
+debug-*.txt
+debug.mjs
+api-test.mjs
