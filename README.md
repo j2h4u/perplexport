@@ -19,7 +19,7 @@ done.json            ← progress log; safe to resume after interruption
 
 ```bash
 git clone https://github.com/j2h4u/perplexport.git
-cd perplexort
+cd perplexport
 npm install && npm run build
 node dist/cli.js -e your@email.com -o ./conversations
 ```
