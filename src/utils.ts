@@ -1,5 +1,8 @@
 import { promises as fs } from "fs";
-import { DoneFile } from "./types";
+
+export interface DoneFile {
+  processedUrls: string[];
+}
 
 export async function loadDoneFile(doneFilePath: string): Promise<DoneFile> {
   try {

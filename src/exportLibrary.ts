@@ -6,7 +6,7 @@ import { loadOrLogin } from "./login";
 import { getConversations, Space, Conversation } from "./listConversations";
 import { loadThread } from "./ConversationSaver";
 import renderConversation from "./renderConversation";
-import { loadDoneFile, saveDoneFile, writeAtomic, fileExists, sleep } from "./utils";
+import { loadDoneFile, saveDoneFile, writeAtomic, fileExists, sleep, DoneFile } from "./utils";
 import { THREAD_EXPORT_DELAY_MS } from "./config";
 
 export interface ExportLibraryOptions {
@@ -127,7 +127,7 @@ export default async function exportLibrary(options: ExportLibraryOptions) {
 
       console.log(`Exporting: ${conversation.title.substring(0, 70)}`);
 
-      const { id, conversation: threadData } = await loadThread(page, conversation.uuid);
+      const { conversation: threadData } = await loadThread(page, conversation.uuid);
 
       await writeAtomic(jsonPath, JSON.stringify(threadData, null, 2));
       await writeAtomic(mdPath, renderConversation(threadData, conversation.space?.title));

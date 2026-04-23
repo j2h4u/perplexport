@@ -22,7 +22,7 @@
     "backup",
     "automation"
   ],
-  "author": "Leonid Shevtsov <leonid@shevtsov.me>",
+  "author": "j2h4u",
   "license": "MIT",
   "dependencies": {
     "commander": "^11.0.0",
@@ -40,10 +40,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/leonid-shevtsov/perplexport.git"
+    "url": "https://github.com/j2h4u/perplexport.git"
   },
   "bugs": {
-    "url": "https://github.com/leonid-shevtsov/perplexport/issues"
+    "url": "https://github.com/j2h4u/perplexport/issues"
   },
-  "homepage": "https://github.com/leonid-shevtsov/perplexport#readme"
+  "homepage": "https://github.com/j2h4u/perplexport#readme"
 }
