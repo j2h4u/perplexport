@@ -18,18 +18,26 @@ function parseFinalAnswer(entry: ConversationEntry): FinalAnswer | null {
 }
 
 export default function renderConversation(
-  conversation: ConversationResponse
+  conversation: ConversationResponse,
+  space?: string
 ): string {
   const { entries } = conversation;
   if (entries.length === 0) return "";
 
-  const items = [
-    `---\nPerplexity URL: https://www.perplexity.ai/search/${
-      entries[0].thread_url_slug
-    }\nLast updated: ${
-      entries[entries.length - 1].updated_datetime
-    }\n---`,
+  const rawTitle = entries[0].thread_title || entries[0].query_str;
+  const title = rawTitle.split("\n")[0].trim().slice(0, 120);
+
+  const fmLines = [
+    `title: ${JSON.stringify(title)}`,
+    `type: perplexity-thread`,
   ];
+  if (space) fmLines.push(`collection: ${JSON.stringify(space)}`);
+  fmLines.push(
+    `created_at: ${entries[0].updated_datetime}`,
+    `updated_at: ${entries[entries.length - 1].updated_datetime}`
+  );
+
+  const items = [`---\n${fmLines.join("\n")}\n---`];
 
   entries.forEach((entry, entryIndex) => {
     if (entryIndex > 0) items.push("* * *");

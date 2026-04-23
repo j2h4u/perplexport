@@ -1,6 +1,5 @@
 import { Page } from "puppeteer";
 import { ThreadListItem } from "./types/conversation";
-import { DoneFile } from "./types";
 import { sleep } from "./utils";
 import {
   SPACE_REQUEST_DELAY_MS,
@@ -42,8 +41,7 @@ async function fetchJson<T>(page: Page, path: string): Promise<T> {
 }
 
 export async function getConversations(
-  page: Page,
-  doneFile: DoneFile
+  page: Page
 ): Promise<Conversation[]> {
   const seen = new Set<string>();
   const all: Conversation[] = [];
@@ -124,7 +122,5 @@ export async function getConversations(
   }
 
   console.log(`Total unique threads: ${all.length}`);
-  const todo = all.filter((c) => !doneFile.processedUrls.includes(c.url));
-  console.log(`${todo.length} new to export`);
-  return todo.reverse();
+  return all;
 }

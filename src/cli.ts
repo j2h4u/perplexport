@@ -12,28 +12,24 @@ program
   .option("-o, --output <directory>", "Output directory for conversations", ".")
   .option("-d, --done-file <file>", "Done file (tracks exported URLs)", "done.json")
   .option("-c, --cookies <file>", "Session cookies file (avoids re-login)", "session-cookies.json")
-  .option(
-    "--backup",
-    "Rename existing output dir to <dir>.backup before exporting (safe when restructuring)"
-  )
-  .requiredOption("-e, --email <email>", "Perplexity email")
-  .parse();
-
-const options = program.opts();
-
-async function main(): Promise<void> {
-  if (options.backup) {
-    await backupIfExists(options.output);
-  }
-  await exportLibrary({
-    outputDir: options.output,
-    doneFilePath: options.doneFile,
-    email: options.email,
-    cookiesFile: options.cookies,
+  .option("--backup", "Rename existing output dir to <dir>.backup before exporting")
+  .option("-e, --email <email>", "Perplexity email")
+  .action(async (opts) => {
+    if (!opts.email) {
+      console.error("error: required option '-e, --email <email>' not specified");
+      process.exit(1);
+    }
+    if (opts.backup) await backupIfExists(opts.output);
+    await exportLibrary({
+      outputDir: opts.output,
+      doneFilePath: opts.doneFile,
+      email: opts.email,
+      cookiesFile: opts.cookies,
+    });
   });
-}
 
-main().catch((error) => {
+
+program.parseAsync().catch((error) => {
   console.error("Fatal error:", error);
   process.exit(1);
 });

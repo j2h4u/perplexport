@@ -3,7 +3,7 @@ import * as path from "path";
 import puppeteer from "puppeteer-extra";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
 import { loadOrLogin } from "./login";
-import { getConversations, Space } from "./listConversations";
+import { getConversations, Space, Conversation } from "./listConversations";
 import { loadThread } from "./ConversationSaver";
 import renderConversation from "./renderConversation";
 import { loadDoneFile, saveDoneFile, writeAtomic, fileExists, sleep } from "./utils";
@@ -23,17 +23,26 @@ function sanitizeFolderName(name: string): string {
     .trim();
 }
 
-function renderSpaceMd(space: Space): string {
-  const lines = [`# ${space.title}`, ""];
-  if (space.description) lines.push(space.description, "");
-  if (space.instructions) lines.push("## Instructions", "", space.instructions, "");
+function yamlStr(s: string): string {
+  return `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
 
-  // Placeholder section for space files (uploaded documents/images).
-  // When the files API is discovered, downloaded files would be listed here
-  // and saved into an _files/ subdirectory alongside this _space.md.
-  lines.push("## Files", "", "_No files exported (API not yet available)_", "");
+function renderSpaceMd(space: Space, threads: Conversation[]): string {
+  const fm = ["---", `title: ${yamlStr(space.title)}`, "type: perplexity-space"];
+  if (space.description) fm.push(`description: ${yamlStr(space.description)}`);
+  fm.push("---");
 
-  return lines.join("\n");
+  const parts: string[] = [fm.join("\n")];
+
+  if (space.instructions) {
+    parts.push("## Instructions\n\n" + space.instructions);
+  }
+
+  if (threads.length > 0) {
+    parts.push("## Chats\n\n" + threads.map((t) => `- [[${t.uuid}.md|${t.title}]]`).join("\n"));
+  }
+
+  return parts.join("\n\n") + "\n";
 }
 
 /** Rename an existing directory to <dir>.backup (or .backup.2, .backup.3, …).
@@ -72,28 +81,36 @@ export default async function exportLibrary(options: ExportLibraryOptions) {
 
   try {
     const page = await loadOrLogin(browser, options.email, options.cookiesFile);
-    const conversations = await getConversations(page, doneFile);
+    const allConversations = await getConversations(page);
+
+    // Build space index and write _space.md files upfront with full thread lists
+    const spaceMap = new Map<string, { space: Space; threads: Conversation[] }>();
+    for (const c of allConversations) {
+      if (!c.space) continue;
+      if (!spaceMap.has(c.space.uuid)) {
+        spaceMap.set(c.space.uuid, { space: c.space, threads: [] });
+      }
+      spaceMap.get(c.space.uuid)!.threads.push(c);
+    }
+    for (const { space, threads } of spaceMap.values()) {
+      const dir = `${options.outputDir}/${sanitizeFolderName(space.title)}`;
+      await fs.mkdir(dir, { recursive: true });
+      await writeAtomic(`${dir}/_space.md`, renderSpaceMd(space, threads));
+    }
+
+    const todo = allConversations
+      .filter((c) => !doneFile.processedUrls.includes(c.url))
+      .reverse();
+    console.log(`${todo.length} new to export`);
 
     let exported = 0;
     let skipped = 0;
-    const writtenSpaces = new Set<string>();
 
-    for (const conversation of conversations) {
+    for (const conversation of todo) {
       let dir = options.outputDir;
       if (conversation.space) {
         const folderName = sanitizeFolderName(conversation.space.title);
         dir = `${options.outputDir}/${folderName}`;
-        await fs.mkdir(dir, { recursive: true });
-
-        if (!writtenSpaces.has(conversation.space.uuid)) {
-          writtenSpaces.add(conversation.space.uuid);
-          await writeAtomic(`${dir}/_space.md`, renderSpaceMd(conversation.space));
-
-          // TODO: Download space files here when API is available.
-          // Something like:
-          //   const files = await listSpaceFiles(page, conversation.space.slug);
-          //   for (const file of files) await downloadFile(file, `${dir}/_files/`);
-        }
       }
 
       const jsonPath = `${dir}/${conversation.uuid}.json`;
@@ -113,7 +130,7 @@ export default async function exportLibrary(options: ExportLibraryOptions) {
       const { id, conversation: threadData } = await loadThread(page, conversation.uuid);
 
       await writeAtomic(jsonPath, JSON.stringify(threadData, null, 2));
-      await writeAtomic(mdPath, renderConversation(threadData));
+      await writeAtomic(mdPath, renderConversation(threadData, conversation.space?.title));
 
       doneFile.processedUrls.push(conversation.url);
       await saveDoneFile(doneFile, options.doneFilePath);
