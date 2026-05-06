@@ -59,7 +59,7 @@ async function loginWithEmail(page: Page, email: string): Promise<void> {
 
 export async function loadOrLogin(
   browser: Browser,
-  email: string,
+  email: string | undefined,
   cookiesFile: string
 ): Promise<Page> {
   const page = await browser.newPage();
@@ -91,6 +91,12 @@ export async function loadOrLogin(
   }
 
   // Full email OTP login
+  if (!email) {
+    throw new Error(
+      "Saved session is missing or invalid. Re-run with -e, --email <email> to log in."
+    );
+  }
+
   await loginWithEmail(page, email);
 
   const cookies = await page.cookies();

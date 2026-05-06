@@ -12,7 +12,7 @@ import { THREAD_EXPORT_DELAY_MS } from "./config";
 export interface ExportLibraryOptions {
   outputDir: string;
   doneFilePath: string;
-  email: string;
+  email?: string;
   cookiesFile: string;
 }
 

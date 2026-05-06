@@ -21,17 +21,17 @@ done.json            ← progress log; safe to resume after interruption
 git clone https://github.com/j2h4u/perplexport.git
 cd perplexport
 npm install && npm run build
-node dist/cli.js -e your@email.com -o ./conversations
+node dist/cli.js -e your@email.com
 ```
 
-First run: enter the 6-digit code sent to your email. Session is saved to `session-cookies.json` — subsequent runs need no code.
+First run: enter the 6-digit code sent to your email. Session is saved to `session-cookies.json` — subsequent runs can use just `node dist/cli.js`.
 
 ## Options
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `-e` | required | Perplexity account email |
-| `-o` | `.` | Output directory |
+| `-e` | only when cookies are missing or invalid | Perplexity account email |
+| `-o` | `./conversations` | Output directory |
 | `-c` | `session-cookies.json` | Session file |
 | `-d` | `done.json` | Progress file |
 | `--backup` | off | Rename existing output dir to `.backup` before running |
