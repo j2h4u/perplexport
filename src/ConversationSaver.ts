@@ -28,14 +28,19 @@ async function fetchThread(page: Page, url: string): Promise<ConversationRespons
     }
 
     try {
-      const data = JSON.parse(result.text) as ConversationResponse;
-      if ((data as any)?.error_code === "RATE_LIMITED") {
+      const parsed: unknown = JSON.parse(result.text);
+      if (
+        typeof parsed === "object" &&
+        parsed !== null &&
+        "error_code" in parsed &&
+        (parsed as Record<string, unknown>).error_code === "RATE_LIMITED"
+      ) {
         const wait = RATE_LIMIT_BACKOFF_BASE_MS * (attempt + 1);
         console.log(`  Rate limited, retrying in ${wait / 1000}s...`);
         await sleep(wait);
         continue;
       }
-      return data;
+      return parsed as ConversationResponse;
     } catch {
       const wait = RATE_LIMIT_BACKOFF_BASE_MS * (attempt + 1);
       console.log(`  Bad JSON, retrying in ${wait / 1000}s...`);
