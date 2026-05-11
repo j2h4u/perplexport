@@ -9,15 +9,13 @@ export async function loadDoneFile(doneFilePath: string): Promise<DoneFile> {
     const content = await fs.readFile(doneFilePath, "utf-8");
     return JSON.parse(content);
   } catch (err: any) {
-    if (err.code !== "ENOENT") console.error(`Warning: could not read ${doneFilePath}:`, err.message);
+    if (err.code !== "ENOENT")
+      console.error(`Warning: could not read ${doneFilePath}:`, err.message);
     return { processedUrls: [] };
   }
 }
 
-export async function saveDoneFile(
-  doneFile: DoneFile,
-  doneFilePath: string
-): Promise<void> {
+export async function saveDoneFile(doneFile: DoneFile, doneFilePath: string): Promise<void> {
   // Atomic write: temp file → rename, so a crash never produces a partial done.json
   const tmp = doneFilePath + ".tmp";
   await fs.writeFile(tmp, JSON.stringify(doneFile, null, 2));

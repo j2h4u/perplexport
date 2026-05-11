@@ -7,7 +7,7 @@ import { loadOrLogin } from "./login";
 import { getConversations, Space, Conversation } from "./listConversations";
 import { loadLatestThreadEntry, loadThread } from "./ConversationSaver";
 import renderConversation from "./renderConversation";
-import { loadDoneFile, saveDoneFile, writeAtomic, fileExists, sleep, DoneFile } from "./utils";
+import { loadDoneFile, saveDoneFile, writeAtomic, fileExists, sleep } from "./utils";
 import { THREAD_EXPORT_DELAY_MS } from "./config";
 
 export interface ExportLibraryOptions {
@@ -84,7 +84,9 @@ function readLocalConversationState(entries: unknown): LocalConversationState | 
   return { latestEntryUuid, latestUpdatedDatetime };
 }
 
-async function localConversationState(jsonPath: string): Promise<LocalConversationState | undefined> {
+async function localConversationState(
+  jsonPath: string,
+): Promise<LocalConversationState | undefined> {
   try {
     const raw = await fs.readFile(jsonPath, "utf-8");
     const data = JSON.parse(raw) as { entries?: unknown };
@@ -107,7 +109,7 @@ async function needsSpaceRefresh(conversation: Conversation, jsonPath: string): 
 async function needsMainRefresh(
   page: Page,
   conversation: Conversation,
-  jsonPath: string
+  jsonPath: string,
 ): Promise<boolean> {
   if (conversation.space) return false;
 
@@ -209,7 +211,7 @@ export default async function exportLibrary(options: ExportLibraryOptions) {
       const jsonPath = `${dir}/${conversation.uuid}.json`;
       const mdPath = `${dir}/${conversation.uuid}.md`;
 
-      if (!refreshExisting && await fileExists(jsonPath) && await fileExists(mdPath)) {
+      if (!refreshExisting && (await fileExists(jsonPath)) && (await fileExists(mdPath))) {
         if (!processedUrls.has(conversation.url)) {
           doneFile.processedUrls.push(conversation.url);
           processedUrls.add(conversation.url);
@@ -219,7 +221,9 @@ export default async function exportLibrary(options: ExportLibraryOptions) {
         continue;
       }
 
-      console.log(`${refreshExisting ? "Refreshing" : "Exporting"}: ${conversation.title.substring(0, 70)}`);
+      console.log(
+        `${refreshExisting ? "Refreshing" : "Exporting"}: ${conversation.title.substring(0, 70)}`,
+      );
 
       const { conversation: threadData } = await loadThread(page, conversation.uuid);
 

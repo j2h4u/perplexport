@@ -47,7 +47,7 @@ async function fetchThread(page: Page, url: string): Promise<ConversationRespons
 
 export async function loadThread(
   page: Page,
-  uuid: string
+  uuid: string,
 ): Promise<{ id: string; conversation: ConversationResponse }> {
   let entries: ConversationEntry[] = [];
   let cursor: string | null = null;
@@ -70,7 +70,7 @@ export async function loadThread(
 
 export async function loadLatestThreadEntry(
   page: Page,
-  uuid: string
+  uuid: string,
 ): Promise<ConversationEntry | undefined> {
   const data = await fetchThread(page, `/rest/thread/${uuid}?limit=1`);
   return data.entries[0];

@@ -19,7 +19,7 @@ function parseFinalAnswer(entry: ConversationEntry): FinalAnswer | null {
 
 export default function renderConversation(
   conversation: ConversationResponse,
-  space?: string
+  space?: string,
 ): string {
   const { entries } = conversation;
   if (entries.length === 0) return "";
@@ -27,14 +27,11 @@ export default function renderConversation(
   const rawTitle = entries[0].thread_title || entries[0].query_str;
   const title = rawTitle.split("\n")[0].trim().slice(0, 120);
 
-  const fmLines = [
-    `title: ${JSON.stringify(title)}`,
-    `type: perplexity-thread`,
-  ];
+  const fmLines = [`title: ${JSON.stringify(title)}`, `type: perplexity-thread`];
   if (space) fmLines.push(`collection: ${JSON.stringify(space)}`);
   fmLines.push(
     `created_at: ${entries[0].updated_datetime}`,
-    `updated_at: ${entries[entries.length - 1].updated_datetime}`
+    `updated_at: ${entries[entries.length - 1].updated_datetime}`,
   );
 
   const items = [`---\n${fmLines.join("\n")}\n---`];

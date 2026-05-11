@@ -2,16 +2,20 @@
   "name": "perplexport",
   "version": "1.0.0",
   "description": "Export Perplexity conversations as markdown files",
-  "main": "dist/index.js",
+  "main": "dist/cli.js",
   "bin": {
     "perplexport": "dist/cli.js"
   },
   "scripts": {
     "build": "tsc",
-    "start": "ts-node src/index.ts",
-    "dev": "ts-node-dev --respawn src/index.ts",
+    "check": "tsc --noEmit",
+    "lint": "oxlint src",
+    "format": "oxfmt src",
+    "format:check": "oxfmt --check src",
+    "start": "node dist/cli.js",
+    "dev": "ts-node src/cli.ts",
     "prepublishOnly": "npm run build",
-    "postinstall": "test -f dist/cli.js && chmod +x dist/cli.js || true"
+    "postinstall": "if [ -f dist/cli.js ]; then chmod +x dist/cli.js; fi"
   },
   "keywords": [
     "perplexity",
@@ -32,6 +36,8 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "oxfmt": "^0.48.0",
+    "oxlint": "^1.63.0",
     "ts-node": "^10.9.0",
     "typescript": "^5.0.0"
   },

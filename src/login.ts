@@ -17,7 +17,10 @@ const SKIP_COOKIES = new Set([
 function promptCode(question: string): Promise<string> {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   return new Promise((resolve) => {
-    rl.question(question, (answer) => { rl.close(); resolve(answer.trim()); });
+    rl.question(question, (answer) => {
+      rl.close();
+      resolve(answer.trim());
+    });
   });
 }
 
@@ -60,7 +63,7 @@ async function loginWithEmail(page: Page, email: string): Promise<void> {
 export async function loadOrLogin(
   browser: Browser,
   email: string | undefined,
-  cookiesFile: string
+  cookiesFile: string,
 ): Promise<Page> {
   const page = await browser.newPage();
   await page.setViewport({ width: 1280, height: 900 });
@@ -73,7 +76,7 @@ export async function loadOrLogin(
     const authCookies = allCookies.filter(
       (c: { name: string; expires?: number }) =>
         !SKIP_COOKIES.has(c.name) &&
-        (c.expires === undefined || c.expires === -1 || c.expires * 1000 > Date.now())
+        (c.expires === undefined || c.expires === -1 || c.expires * 1000 > Date.now()),
     );
 
     // Load page first (fresh Cloudflare state), then inject auth cookies
@@ -93,7 +96,7 @@ export async function loadOrLogin(
   // Full email OTP login
   if (!email) {
     throw new Error(
-      "Saved session is missing or invalid. Re-run with -e, --email <email> to log in."
+      "Saved session is missing or invalid. Re-run with -e, --email <email> to log in.",
     );
   }
 

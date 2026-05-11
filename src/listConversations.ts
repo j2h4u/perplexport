@@ -41,9 +41,7 @@ async function fetchJson<T>(page: Page, path: string): Promise<T> {
   throw new Error(`Rate limited after ${LIST_FETCH_RETRIES} retries: ${path}`);
 }
 
-export async function getConversations(
-  page: Page
-): Promise<Conversation[]> {
+export async function getConversations(page: Page): Promise<Conversation[]> {
   const seen = new Set<string>();
   const all: Conversation[] = [];
 
@@ -51,7 +49,7 @@ export async function getConversations(
   console.log("Fetching main library...");
   const libraryThreads = await fetchJson<ThreadListItem[]>(
     page,
-    `/rest/thread/list_recent?limit=${LIST_LIMIT}`
+    `/rest/thread/list_recent?limit=${LIST_LIMIT}`,
   );
   libraryThreads.forEach((t) => {
     if (seen.has(t.uuid)) return;
@@ -67,16 +65,21 @@ export async function getConversations(
   // 2. Spaces — fetch full collection metadata (includes instructions) then threads
   console.log("Fetching spaces...");
   type CollectionItem = {
-    uuid: string; slug: string; title: string;
-    instructions?: string; description?: string;
+    uuid: string;
+    slug: string;
+    title: string;
+    instructions?: string;
+    description?: string;
   };
   const collectionsData = await fetchJson<CollectionItem[]>(
     page,
-    "/rest/collections/list_user_collections"
+    "/rest/collections/list_user_collections",
   );
   const collectionBySlug = new Map(collectionsData.map((c) => [c.slug, c]));
 
-  type SpacesV2 = { sections: { main: { items: Array<{ slug: string; title: string; uuid: string }> } } };
+  type SpacesV2 = {
+    sections: { main: { items: Array<{ slug: string; title: string; uuid: string }> } };
+  };
   const spacesData = await fetchJson<SpacesV2>(page, "/rest/spaces/landing/v2");
   const spaces = spacesData.sections?.main?.items ?? [];
   console.log(`  ${spaces.length} spaces found`);
@@ -96,7 +99,7 @@ export async function getConversations(
 
     const threads = await fetchJson<unknown>(
       page,
-      `/rest/collections/list_collection_threads?collection_slug=${space.slug}&limit=${LIST_LIMIT}`
+      `/rest/collections/list_collection_threads?collection_slug=${space.slug}&limit=${LIST_LIMIT}`,
     );
     if (!Array.isArray(threads)) {
       console.log(`  "${space.title}": unexpected response`);
