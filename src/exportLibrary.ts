@@ -51,12 +51,12 @@ function conversationDir(outputDir: string, conversation: Conversation): string 
   return `${outputDir}/${sanitizeFolderName(conversation.space.title)}`;
 }
 
-interface LocalConversationState {
+export interface LocalConversationState {
   latestEntryUuid?: string;
   latestUpdatedDatetime?: string;
 }
 
-function readLocalConversationState(entries: unknown): LocalConversationState | undefined {
+export function readLocalConversationState(entries: unknown): LocalConversationState | undefined {
   if (!Array.isArray(entries)) return undefined;
 
   let latestUpdatedDatetime: string | undefined;

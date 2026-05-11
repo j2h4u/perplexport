@@ -8,6 +8,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "test": "vitest run",
     "check": "tsc --noEmit",
     "lint": "oxlint src",
     "format": "oxfmt src",
@@ -39,7 +40,8 @@
     "oxfmt": "^0.48.0",
     "oxlint": "^1.63.0",
     "ts-node": "^10.9.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "^4.1.6"
   },
   "engines": {
     "node": ">=16.0.0"
