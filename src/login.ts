@@ -89,8 +89,10 @@ export async function loadOrLogin(
       return page;
     }
     console.log("Saved session invalid, re-logging in...");
-  } catch {
-    // No cookies file yet
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`Could not load cookies from ${cookiesFile}: ${(err as Error).message}`);
+    }
   }
 
   // Full email OTP login
