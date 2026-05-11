@@ -1,6 +1,8 @@
 # Perplexity Conversation Exporter
 
-Perplexity suddenly started demanding phone verification for all account access, with a 30-day countdown before your data is deleted. Not everyone can or wants to comply: many countries aren't supported, your subscription may not match any number you own, or you simply don't want to hand over your phone number. This tool exports your full history — library and all Spaces — before the deadline, bypassing the phone verification gate entirely via direct API calls.
+Export and regularly sync your Perplexity history — both main library threads and Spaces — into local Markdown and JSON files.
+
+The first run exports the available history. Later runs are incremental: the tool skips unchanged threads, picks up new conversations, and refreshes existing conversations only when the remote state changed. That makes it suitable for scheduled backups, not just a one-time emergency export.
 
 ## Output
 
@@ -24,7 +26,7 @@ npm install && npm run build
 node dist/cli.js -e your@email.com
 ```
 
-First run: enter the 6-digit code sent to your email. Session is saved to `session-cookies.json` — subsequent runs can use just `node dist/cli.js`.
+First run: enter the 6-digit code sent to your email. Session is saved to `session-cookies.json` — subsequent sync runs can use just `node dist/cli.js`.
 
 ## Options
 
@@ -38,7 +40,9 @@ First run: enter the 6-digit code sent to your email. Session is saved to `sessi
 
 ## Notes
 
-- Idempotent: re-running skips already-exported threads and picks up new ones
+- Incremental sync: re-running skips unchanged threads, picks up new ones, and refreshes changed ones
+- Main library chats are checked with a lightweight latest-entry request before any full re-export
+- Space chats are checked via remote `last_query_datetime`
 - Crash-safe: each file written atomically; progress saved after every thread
 - If Chrome doesn't launch: `npx puppeteer browsers install chrome`
 - Requires Node.js ≥ 16

@@ -20,6 +20,7 @@ export interface Conversation {
   uuid: string;
   title: string;
   url: string;
+  lastQueryDatetime?: string;
   space?: Space;
 }
 
@@ -101,7 +102,12 @@ export async function getConversations(
       console.log(`  "${space.title}": unexpected response`);
       continue;
     }
-    const typedThreads = threads as Array<{ uuid: string; title: string; slug: string }>;
+    const typedThreads = threads as Array<{
+      uuid: string;
+      title: string;
+      slug: string;
+      last_query_datetime?: string;
+    }>;
     typedThreads.forEach((t) => {
       if (seen.has(t.uuid)) return;
       seen.add(t.uuid);
@@ -109,6 +115,7 @@ export async function getConversations(
         uuid: t.uuid,
         title: t.title ?? t.uuid,
         url: `https://www.perplexity.ai/search/${t.slug ?? t.uuid}`,
+        lastQueryDatetime: t.last_query_datetime,
         space,
       });
     });

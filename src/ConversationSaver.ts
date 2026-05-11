@@ -67,3 +67,11 @@ export async function loadThread(
     conversation: { status: "completed", entries, has_next_page: false, next_cursor: null },
   };
 }
+
+export async function loadLatestThreadEntry(
+  page: Page,
+  uuid: string
+): Promise<ConversationEntry | undefined> {
+  const data = await fetchThread(page, `/rest/thread/${uuid}?limit=1`);
+  return data.entries[0];
+}
