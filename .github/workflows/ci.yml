@@ -11,8 +11,9 @@ permissions:
   contents: read
 
 # Cancel superseded runs on the same ref (e.g. rapid pushes / PR updates).
+# Group key includes the workflow name so it stays isolated if more workflows are added.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
