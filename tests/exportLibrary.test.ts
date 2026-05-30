@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { readLocalConversationState } from "../src/exportLibrary";
+import { readLocalConversationState, isLikelyLoggedOut } from "../src/exportLibrary";
 
 describe("readLocalConversationState", () => {
   it("returns undefined for non-array input", () => {
@@ -62,5 +62,20 @@ describe("readLocalConversationState", () => {
     ];
     const result = readLocalConversationState(entries);
     expect(result?.latestUpdatedDatetime).toBe("2024-01-01T00:00:00Z");
+  });
+});
+
+describe("isLikelyLoggedOut", () => {
+  it("flags zero fetched against a non-empty done.json", () => {
+    expect(isLikelyLoggedOut(0, 468)).toBe(true);
+  });
+
+  it("allows zero fetched on a fresh account (empty done.json)", () => {
+    expect(isLikelyLoggedOut(0, 0)).toBe(false);
+  });
+
+  it("allows a normal run that fetched conversations", () => {
+    expect(isLikelyLoggedOut(12, 468)).toBe(false);
+    expect(isLikelyLoggedOut(1, 0)).toBe(false);
   });
 });

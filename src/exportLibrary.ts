@@ -1,6 +1,6 @@
 import { promises as fs } from "fs";
 import * as path from "path";
-import { Page } from "puppeteer";
+import { Browser, Page } from "puppeteer";
 import puppeteer from "puppeteer-extra";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
 import { loadOrLogin } from "./login";
@@ -15,6 +15,8 @@ export interface ExportLibraryOptions {
   doneFilePath: string;
   email?: string;
   cookiesFile: string;
+  otpFifo?: string;
+  headful?: boolean;
 }
 
 function sanitizeFolderName(name: string): string {
@@ -145,6 +147,31 @@ async function backupIfExists(dir: string): Promise<void> {
   console.log(`Backed up existing output to ${path.basename(dest)}`);
 }
 
+// puppeteer-extra has its own loose types; narrow launch() to the puppeteer Browser we use.
+type Launcher = { launch: (options: { headless: boolean }) => Promise<Browser> };
+
+// Headless Chrome is the easiest "tell" for Cloudflare Turnstile (seen on the 2FA page).
+// Running headful under a virtual display (xvfb-run) often clears it.
+async function launchBrowser(headful: boolean): Promise<Browser> {
+  try {
+    return await (puppeteer as unknown as Launcher).launch({ headless: !headful });
+  } catch (err) {
+    if ((err as Error).message?.includes("Could not find Chrome")) {
+      throw new Error(
+        "Chrome for Puppeteer is missing. Install it with: npx puppeteer browsers install chrome",
+      );
+    }
+    throw err;
+  }
+}
+
+// Zero conversations fetched while done.json already lists some means the session is no
+// longer authenticated — Perplexity serves an empty library when logged out. Treat that
+// as a hard error instead of a successful "nothing new" run.
+export function isLikelyLoggedOut(fetchedCount: number, previouslyExportedCount: number): boolean {
+  return fetchedCount === 0 && previouslyExportedCount > 0;
+}
+
 export default async function exportLibrary(options: ExportLibraryOptions) {
   puppeteer.use(StealthPlugin());
 
@@ -152,13 +179,18 @@ export default async function exportLibrary(options: ExportLibraryOptions) {
   const doneFile = await loadDoneFile(options.doneFilePath);
   console.log(`${doneFile.processedUrls.length} already exported`);
 
-  const browser = await (puppeteer as any).launch({
-    headless: true,
-  });
+  const browser = await launchBrowser(options.headful ?? false);
 
   try {
-    const page = await loadOrLogin(browser, options.email, options.cookiesFile);
+    const page = await loadOrLogin(browser, options.email, options.cookiesFile, options.otpFifo);
     const allConversations = await getConversations(page);
+
+    if (isLikelyLoggedOut(allConversations.length, doneFile.processedUrls.length)) {
+      throw new Error(
+        `Fetched 0 conversations but ${doneFile.processedUrls.length} were previously exported — ` +
+          "the saved session is almost certainly expired. Re-run with -e, --email <email> to refresh it.",
+      );
+    }
 
     // Build space index and write _space.md files upfront with full thread lists
     const spaceMap = new Map<string, { space: Space; threads: Conversation[] }>();
