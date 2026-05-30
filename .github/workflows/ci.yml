@@ -31,8 +31,8 @@ jobs:
         # Floor of engines (>=20), plus the runtime we actually ship on (24).
         node-version: [20, 22, 24]
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
