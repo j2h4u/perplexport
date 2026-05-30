@@ -6,14 +6,34 @@ on:
   pull_request:
     branches: [main]
 
+# Least privilege: CI only reads the repo.
+permissions:
+  contents: read
+
+# Cancel superseded runs on the same ref (e.g. rapid pushes / PR updates).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Tests are pure unit tests — no browser is launched — so skip the ~150MB
+  # Chromium download puppeteer would otherwise fetch during `npm ci`.
+  PUPPETEER_SKIP_DOWNLOAD: "1"
+
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        # Floor of engines (>=20), plus the runtime we actually ship on (24).
+        node-version: [20, 22, 24]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ matrix.node-version }}
           cache: npm
       - run: npm ci
       - run: npm run check
@@ -21,3 +41,19 @@ jobs:
       - run: npm run format:check
       - run: npm test
       - run: npm run build
+
+  # Stable required-status-check for branch protection. Matrix job names vary by
+  # Node version ("check (20)" …), so protection targets this single gate, which
+  # passes only if every matrix leg succeeded.
+  ci-success:
+    if: always()
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify matrix result
+        run: |
+          if [ "${{ needs.check.result }}" != "success" ]; then
+            echo "CI matrix did not pass: ${{ needs.check.result }}"
+            exit 1
+          fi
+          echo "All matrix legs passed."

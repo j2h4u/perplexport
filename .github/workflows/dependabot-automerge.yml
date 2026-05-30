@@ -1,8 +1,8 @@
 name: Dependabot auto-merge
 
 # Enables GitHub auto-merge on safe Dependabot PRs. Auto-merge waits for the
-# required "check" status (branch protection on main) before merging, so nothing
-# lands on a red CI. Runtime minor/major bumps are left for manual review.
+# required "ci-success" status (branch protection on main) before merging, so
+# nothing lands on a red CI. Runtime minor/major bumps are left for manual review.
 on: pull_request
 
 permissions:
