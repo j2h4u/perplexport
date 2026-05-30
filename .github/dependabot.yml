@@ -1,0 +1,50 @@
+# Dependabot keeps dependencies current; CI (.github/workflows/ci.yml) gates every PR.
+# Safe updates (patch, all dev-deps, minor GitHub Actions) auto-merge once CI is
+# green — see .github/workflows/dependabot-automerge.yml. Runtime majors stay manual.
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "Asia/Almaty"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+    groups:
+      # One PR for all dev-dep minor/patch bumps — auto-merged on green CI.
+      dev-dependencies:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+      # One PR for runtime minor/patch bumps. Patch-only groups auto-merge;
+      # a group containing a minor waits for manual review (e.g. puppeteer).
+      production-minor-patch:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
+    # Runtime majors arrive as individual PRs (not matched by any group) — manual.
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "Asia/Almaty"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"
+    groups:
+      github-actions:
+        patterns:
+          - "*"

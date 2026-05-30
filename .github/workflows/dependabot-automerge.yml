@@ -1,0 +1,30 @@
+name: Dependabot auto-merge
+
+# Enables GitHub auto-merge on safe Dependabot PRs. Auto-merge waits for the
+# required "check" status (branch protection on main) before merging, so nothing
+# lands on a red CI. Runtime minor/major bumps are left for manual review.
+on: pull_request
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  automerge:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - name: Fetch update metadata
+        id: meta
+        uses: dependabot/fetch-metadata@v2
+
+      - name: Enable auto-merge for safe updates
+        if: >
+          steps.meta.outputs.update-type == 'version-update:semver-patch' ||
+          steps.meta.outputs.dependency-type == 'direct:development' ||
+          (steps.meta.outputs.package-ecosystem == 'github_actions' &&
+           steps.meta.outputs.update-type == 'version-update:semver-minor')
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
