@@ -91,7 +91,10 @@ async function localConversationState(
     const raw = await fs.readFile(jsonPath, "utf-8");
     const data = JSON.parse(raw) as { entries?: unknown };
     return readLocalConversationState(data.entries);
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`Could not read local state from ${jsonPath}: ${(err as Error).message}`);
+    }
     return undefined;
   }
 }
