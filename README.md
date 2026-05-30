@@ -92,3 +92,7 @@ npm run dev         # run from source via ts-node (no build step)
 - Crash-safe: each file written atomically; progress saved after every thread
 - **Not exported:** uploaded files and images attached to Spaces — the API endpoint for Space files has not been discovered yet
 - If Chrome doesn't launch: `npx puppeteer browsers install chrome`
+
+---
+
+> Fork of [leonid-shevtsov/perplexport](https://github.com/leonid-shevtsov/perplexport) — substantially rewritten. The original UI scraping no longer works with the current Perplexity interface.
