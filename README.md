@@ -36,7 +36,30 @@ npm install && npm run build
 node dist/cli.js -e your@email.com
 ```
 
-First run: enter the 6-digit code sent to your email. Session is saved to `session-cookies.json` — subsequent sync runs can use just `node dist/cli.js`.
+First run: enter the 6-digit code sent to your email (**valid ~5 minutes** — request a new run if it expires). The session is saved to `session-cookies.json` and lasts ~30 days, so subsequent sync runs need just `node dist/cli.js`.
+
+### Two-factor accounts (TOTP)
+
+If your account has an authenticator-app second factor, the login flow asks for the TOTP code after the email code. The 2FA page is protected by **Cloudflare Turnstile, which blocks headless Chrome** — so on a server you must run the login **headful under a virtual display**:
+
+```bash
+xvfb-run -a node dist/cli.js -e your@email.com --headful
+```
+
+Accounts without 2FA don't need `--headful`; the flow detects the TOTP challenge by URL and skips it when absent. Once the session is saved, routine incremental syncs work headless again (Turnstile only guards the login page).
+
+### Non-interactive / automated login
+
+`--otp-fifo <path>` reads each code from a named pipe instead of prompting, so a script or agent can deliver codes mid-run:
+
+```bash
+mkfifo /tmp/otp
+xvfb-run -a node dist/cli.js -e your@email.com --headful --otp-fifo /tmp/otp &
+# when prompted, write the email code, then (if 2FA) the authenticator code:
+echo 123456 > /tmp/otp
+```
+
+The emailed code wait times out after 5 minutes; the TOTP wait does not (the authenticator code refreshes every ~30s).
 
 ## Options
 
@@ -47,6 +70,8 @@ First run: enter the 6-digit code sent to your email. Session is saved to `sessi
 | `-c` | `session-cookies.json` | Session file |
 | `-d` | `done.json` | Progress file |
 | `--backup` | off | Rename existing output dir to `.backup` before running |
+| `--headful` | off | Run a visible browser (use with `xvfb-run`) — needed to pass Cloudflare on the 2FA page |
+| `--otp-fifo <path>` | off | Read the email/TOTP codes from a named pipe instead of prompting |
 
 ## Development
 
@@ -67,7 +92,3 @@ npm run dev         # run from source via ts-node (no build step)
 - Crash-safe: each file written atomically; progress saved after every thread
 - **Not exported:** uploaded files and images attached to Spaces — the API endpoint for Space files has not been discovered yet
 - If Chrome doesn't launch: `npx puppeteer browsers install chrome`
-
----
-
-> Fork of [leonid-shevtsov/perplexort](https://github.com/leonid-shevtsov/perplexort) — completely rewritten. The original UI scraping no longer works with the current Perplexity interface.

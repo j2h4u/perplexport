@@ -2,7 +2,7 @@ node_modules
 dist
 
 # Runtime artifacts
-conversations/
+conversations
 done.json
 session-cookies.json
 *.backup
