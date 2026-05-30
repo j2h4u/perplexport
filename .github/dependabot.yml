@@ -16,6 +16,11 @@ updates:
     commit-message:
       prefix: "chore(deps)"
       prefix-development: "chore(deps-dev)"
+    ignore:
+      # Pin @types/node to the runtime's major (Node 24 LTS) — don't chase
+      # Node 25 (current/non-LTS). Bump this when the server moves to a new LTS.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       # One PR for all dev-dep minor/patch bumps — auto-merged on green CI.
       dev-dependencies:
