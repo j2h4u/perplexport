@@ -31,21 +31,21 @@
   "author": "j2h4u",
   "license": "MIT",
   "dependencies": {
-    "commander": "^11.0.0",
-    "puppeteer": "^24.9.0",
+    "commander": "^15.0.0",
+    "puppeteer": "^25.1.0",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
-    "oxfmt": "^0.48.0",
-    "oxlint": "^1.63.0",
+    "@types/node": "^24.0.0",
+    "oxfmt": "^0.52.0",
+    "oxlint": "^1.67.0",
     "ts-node": "^10.9.0",
-    "typescript": "^5.0.0",
-    "vitest": "^4.1.6"
+    "typescript": "^6.0.0",
+    "vitest": "^4.1.7"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=20.0.0"
   },
   "repository": {
     "type": "git",
