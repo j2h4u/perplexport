@@ -26,6 +26,9 @@ export interface Conversation {
 
 async function fetchJson<T>(page: Page, path: string): Promise<T> {
   for (let attempt = 0; attempt < LIST_FETCH_RETRIES; attempt++) {
+    // In-page fetch (not node HTTP) is deliberate — Cloudflare binds cf_clearance
+    // to the browser's TLS/JA3 fingerprint; a node request with the same cookies
+    // gets a 403 challenge. See fetchThread in ConversationSaver.ts for the full why.
     const result = await page.evaluate(async (p: string) => {
       const r = await fetch(p);
       return r.json();

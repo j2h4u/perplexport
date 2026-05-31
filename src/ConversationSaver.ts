@@ -10,6 +10,10 @@ import {
 
 async function fetchThread(page: Page, url: string): Promise<ConversationResponse> {
   for (let attempt = 0; attempt < THREAD_FETCH_RETRIES; attempt++) {
+    // Fetch runs inside the page (not node HTTP) on purpose: Cloudflare binds
+    // cf_clearance to the browser's TLS/JA3 fingerprint, so a node-side request
+    // with the same cookies gets a 403 challenge. The browser is our CF-passing
+    // client here, not an HTML renderer. Don't "optimize" this to node fetch.
     const result = await page.evaluate(async (u: string) => {
       try {
         const r = await fetch(u);

@@ -95,6 +95,12 @@ npm run build       # tsc → dist/
 npm run dev         # run from source via ts-node (no build step)
 ```
 
+## Why a real browser?
+
+Perplexity's REST API sits behind **Cloudflare bot management**, and a valid session cookie isn't enough on its own: Cloudflare binds its `cf_clearance` cookie to the **TLS/JA3 fingerprint** of the browser that earned it. A plain Node `fetch` carrying the *exact same* cookies gets a `403 "Just a moment…"` challenge — the fingerprint doesn't match.
+
+So every `/rest/` call is issued from inside the Puppeteer page (`page.evaluate(() => fetch(...))`). The browser is the Cloudflare-passing client, not an HTML renderer — the data itself is plain JSON. That's why a browser is needed on **every** run, not only at login. Going browserless would require a TLS-impersonating HTTP client (e.g. curl-impersonate) to spoof the JA3 fingerprint — an arms race against Cloudflare that isn't worth it for a backup tool.
+
 ## Notes
 
 - Incremental sync: re-running skips unchanged threads, picks up new ones, and refreshes changed ones
