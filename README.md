@@ -33,10 +33,21 @@ done.json            ← progress log; safe to resume after interruption
 git clone https://github.com/j2h4u/perplexport.git
 cd perplexport
 npm install && npm run build
+```
+
+**Routine sync** — no flags, no login. Uses the saved 30-day session, runs headless, and exports only new or changed threads:
+
+```bash
+node dist/cli.js
+```
+
+**First run / expired session** — pass your email to log in once:
+
+```bash
 node dist/cli.js -e your@email.com
 ```
 
-First run: enter the 6-digit code sent to your email (**valid ~5 minutes** — request a new run if it expires). The session is saved to `session-cookies.json` and lasts ~30 days, so subsequent sync runs need just `node dist/cli.js`.
+Enter the 6-digit code sent to your email (**valid ~5 minutes** — request a new run if it expires). The session is saved to `session-cookies.json` and lasts ~30 days, after which the routine sync above works without `-e`.
 
 ### Two-factor accounts (TOTP)
 
