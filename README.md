@@ -19,8 +19,9 @@ done.json            ← progress log; safe to resume after interruption
 
 ## Prerequisites
 
-- **Node.js ≥ 16** — [nodejs.org](https://nodejs.org)
-- **Chrome system libraries** (Linux only) — Puppeteer downloads a bundled Chrome on `npm install`, but it requires shared libraries that may be missing on minimal systems:
+- **Node.js and npm** — [nodejs.org](https://nodejs.org)
+- **Puppeteer Chrome** — if Chrome is missing, install it with `npx puppeteer browsers install chrome`.
+- **Chrome system libraries** (Linux only) — minimal systems may need shared libraries:
   ```bash
   sudo apt-get install -y libglib2.0-0 libnss3 libatk1.0-0 libatk-bridge2.0-0 \
     libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libxkbcommon0 libasound2
@@ -47,7 +48,7 @@ node dist/cli.js
 node dist/cli.js -e your@email.com
 ```
 
-Enter the 6-digit code sent to your email (**valid ~5 minutes** — request a new run if it expires). The session is saved to `session-cookies.json` and lasts ~30 days, after which the routine sync above works without `-e`.
+Enter the 6-digit code sent to your email (**valid ~5 minutes** — request a new run if it expires). The session is saved to `session-cookies.json` and lasts ~30 days; during that time the routine sync above works without `-e`.
 
 ### Two-factor accounts (TOTP)
 
