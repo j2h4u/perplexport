@@ -6,7 +6,9 @@ import StealthPlugin from "puppeteer-extra-plugin-stealth";
 import { loadOrLogin } from "./login";
 import { getConversations, Space, Conversation } from "./listConversations";
 import { loadLatestThreadEntry, loadThread } from "./ConversationSaver";
+import { ConversationResponse } from "./types/conversation";
 import renderConversation from "./renderConversation";
+import { fetchThreadFiles, FetchFilesResult } from "./fetchAttachments";
 import { loadDoneFile, saveDoneFile, writeAtomic, fileExists, sleep } from "./utils";
 import { THREAD_EXPORT_DELAY_MS } from "./config";
 
@@ -17,6 +19,10 @@ export interface ExportLibraryOptions {
   cookiesFile: string;
   otpFifo?: string;
   headful?: boolean;
+  /** Download uploaded + generated files for each exported thread. */
+  files?: boolean;
+  /** Re-download files that already exist on disk. */
+  refetchFiles?: boolean;
 }
 
 function sanitizeFolderName(name: string): string {
@@ -239,6 +245,42 @@ export default async function exportLibrary(options: ExportLibraryOptions) {
     let exported = 0;
     let refreshed = 0;
     let skipped = 0;
+    const fileTotals = { downloaded: 0, failed: 0, gone: 0, skipped: 0 };
+
+    // Files live outside the thread folders so a Space rename can't orphan them,
+    // and so the markdown/JSON tree stays exactly as it was before this feature.
+    const filesRoot = `${options.outputDir}/_files`;
+
+    // Conversation text is the primary artifact; files are a bonus. A file-side
+    // failure must never abort the run or stop a thread being marked processed,
+    // so everything here is contained and reported rather than thrown.
+    const downloadFiles = async (conversation: Conversation, threadData: ConversationResponse) => {
+      let result: FetchFilesResult;
+      try {
+        result = await fetchThreadFiles({
+          page,
+          uuid: conversation.uuid,
+          conversation: threadData,
+          filesDir: `${filesRoot}/${conversation.uuid}`,
+          force: options.refetchFiles,
+        });
+      } catch (err) {
+        console.warn(`    files: skipped — ${(err as Error).message}`);
+        fileTotals.failed++;
+        return;
+      }
+      fileTotals.downloaded += result.downloaded;
+      fileTotals.failed += result.failed;
+      fileTotals.gone += result.gone;
+      fileTotals.skipped += result.skipped;
+
+      const parts: string[] = [];
+      if (result.downloaded) parts.push(`${result.downloaded} downloaded`);
+      if (result.skipped) parts.push(`${result.skipped} already present`);
+      if (result.gone) parts.push(`${result.gone} no longer stored upstream`);
+      if (result.failed) parts.push(`${result.failed} failed`);
+      if (parts.length) console.log(`    files: ${parts.join(", ")}`);
+    };
 
     for (const { conversation, refreshExisting } of todo) {
       const dir = conversationDir(options.outputDir, conversation);
@@ -253,6 +295,27 @@ export default async function exportLibrary(options: ExportLibraryOptions) {
           await saveDoneFile(doneFile, options.doneFilePath);
         }
         skipped++;
+
+        // The thread itself is unchanged, but its files may never have been
+        // fetched (e.g. first run with --files over an existing export). The
+        // uploaded-file URLs expire in ~10 minutes, so they have to be re-signed
+        // by re-reading the thread rather than reused from the saved JSON.
+        if (
+          options.files &&
+          !(await fileExists(`${filesRoot}/${conversation.uuid}/manifest.json`))
+        ) {
+          console.log(`Fetching files: ${conversation.title.substring(0, 60)}`);
+          // Re-reading the thread can fail on its own (rate limit, Cloudflare);
+          // downloadFiles handles everything past that point.
+          try {
+            const { conversation: threadData } = await loadThread(page, conversation.uuid);
+            await downloadFiles(conversation, threadData);
+          } catch (err) {
+            console.warn(`    files: could not re-read thread — ${(err as Error).message}`);
+            fileTotals.failed++;
+          }
+          await sleep(THREAD_EXPORT_DELAY_MS);
+        }
         continue;
       }
 
@@ -264,6 +327,8 @@ export default async function exportLibrary(options: ExportLibraryOptions) {
 
       await writeAtomic(jsonPath, JSON.stringify(threadData, null, 2));
       await writeAtomic(mdPath, renderConversation(threadData, conversation.space?.title));
+
+      if (options.files) await downloadFiles(conversation, threadData);
 
       if (!processedUrls.has(conversation.url)) {
         doneFile.processedUrls.push(conversation.url);
@@ -278,6 +343,12 @@ export default async function exportLibrary(options: ExportLibraryOptions) {
 
     if (skipped > 0) console.log(`Skipped ${skipped} already-exported.`);
     console.log(`Done. Exported ${exported} new conversations, refreshed ${refreshed}.`);
+    if (options.files) {
+      console.log(
+        `Files: ${fileTotals.downloaded} downloaded, ${fileTotals.skipped} already present, ` +
+          `${fileTotals.gone} no longer stored upstream, ${fileTotals.failed} failed.`,
+      );
+    }
   } finally {
     await browser.close();
   }

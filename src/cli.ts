@@ -19,6 +19,11 @@ program
     "Read the emailed OTP code from this named pipe instead of prompting (for non-interactive/agent use)",
   )
   .option(
+    "--files",
+    "Also download each thread's files: uploaded context files and generated results (PDF/XLSX/DOCX/…)",
+  )
+  .option("--refetch-files", "With --files, re-download files that already exist on disk")
+  .option(
     "--headful",
     "Run a visible browser (use with xvfb-run on a headless server) — helps pass Cloudflare on 2FA",
   )
@@ -31,6 +36,8 @@ program
       cookiesFile: opts.cookies,
       otpFifo: opts.otpFifo,
       headful: opts.headful,
+      files: opts.files,
+      refetchFiles: opts.refetchFiles,
     });
   });
 

@@ -1,5 +1,6 @@
 import { Page } from "puppeteer";
 import { ThreadListItem } from "./types/conversation";
+import { listLibraryThreads, PersistedQueryUnavailable, threadUrl } from "./listLibrary";
 import { sleep } from "./utils";
 import {
   SPACE_REQUEST_DELAY_MS,
@@ -48,22 +49,45 @@ export async function getConversations(page: Page): Promise<Conversation[]> {
   const seen = new Set<string>();
   const all: Conversation[] = [];
 
-  // 1. Main library — threads not assigned to any space
+  // 1. Main library — every thread, via the paginated GraphQL connection.
+  //    list_recent is capped at 20 and ignores every paging parameter, so it is
+  //    only a fallback for when the persisted-query hashes rotate.
+  //
+  //    The library connection also returns threads that live in a Space, so these
+  //    are collected but not claimed until after the Space pass below — otherwise
+  //    whichever pass ran first would win and a Space thread would be filed at the
+  //    output root with no `space`, losing its folder and its _space.md entry.
+  const deferredLibraryThreads: Conversation[] = [];
   console.log("Fetching main library...");
-  const libraryThreads = await fetchJson<ThreadListItem[]>(
-    page,
-    `/rest/thread/list_recent?limit=${LIST_LIMIT}`,
-  );
-  libraryThreads.forEach((t) => {
-    if (seen.has(t.uuid)) return;
-    seen.add(t.uuid);
-    all.push({
-      uuid: t.uuid,
-      title: t.title ?? t.uuid,
-      url: `https://www.perplexity.ai${t.link ?? `/search/${t.uuid}`}`,
+  try {
+    const libraryThreads = await listLibraryThreads(page);
+    libraryThreads.forEach((t) => {
+      deferredLibraryThreads.push({ uuid: t.uuid, title: t.title, url: threadUrl(t) });
     });
-  });
-  console.log(`  ${libraryThreads.length} threads in library`);
+    console.log(`  ${libraryThreads.length} threads in library`);
+  } catch (err) {
+    const reason = (err as Error).message;
+    if (err instanceof PersistedQueryUnavailable) {
+      console.warn(`  ${reason}`);
+      console.warn("  Falling back to list_recent — only the 20 most recent threads.");
+      console.warn("  See LIBRARY_FIRST_PAGE_QUERY in src/config.ts for how to refresh.");
+    } else {
+      console.warn(`  Library listing failed (${reason}); falling back to list_recent.`);
+    }
+
+    const recent = await fetchJson<ThreadListItem[]>(
+      page,
+      `/rest/thread/list_recent?limit=${LIST_LIMIT}`,
+    );
+    recent.forEach((t) => {
+      deferredLibraryThreads.push({
+        uuid: t.uuid,
+        title: t.title ?? t.uuid,
+        url: `https://www.perplexity.ai${t.link ?? `/search/${t.uuid}`}`,
+      });
+    });
+    console.log(`  ${recent.length} threads in library (fallback)`);
+  }
 
   // 2. Spaces — fetch full collection metadata (includes instructions) then threads
   console.log("Fetching spaces...");
@@ -127,11 +151,19 @@ export async function getConversations(page: Page): Promise<Conversation[]> {
     });
     console.log(`  "${space.title}": ${typedThreads.length} threads`);
 
-    // TODO: Space files (uploaded documents/images) — API endpoint not yet discovered.
-    // When phone-verification gate is resolved:
-    //   GET /rest/collections/list_collection_files?collection_slug=<slug>
-    //   or similar endpoint (file_count field exists in list_user_collections response).
-    // The Space object already carries uuid/slug needed to make this call.
+    // TODO: Space-level files (documents attached to the Space itself, not to a
+    // thread) — endpoint still not discovered. list_collection_files and several
+    // variants all return 404; list_user_collections does expose a file_count, so
+    // some endpoint exists. Note this is only about Space-level files: files
+    // belonging to a thread are handled by src/fetchAttachments.ts (--files).
+    // The Space object already carries the uuid/slug such a call would need.
+  }
+
+  // Anything the Space pass didn't claim is a plain library thread.
+  for (const conversation of deferredLibraryThreads) {
+    if (seen.has(conversation.uuid)) continue;
+    seen.add(conversation.uuid);
+    all.push(conversation);
   }
 
   console.log(`Total unique threads: ${all.length}`);
